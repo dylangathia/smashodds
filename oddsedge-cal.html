@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OddsEdge - Betting Tools & Calculators</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen p-8 font-sans text-gray-200">
+  <div class="max-w-4xl mx-auto space-y-10">
+
+    <div class="glass rounded-2xl shadow-2xl p-8">
+      <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        🎲 Betting Tools & Calculators
+      </h1>
+      <p class="text-gray-300 mb-6">Calculate stakes, payouts, combined odds, convert between odds formats, and find arbitrage opportunities.</p>
+    </div>
+
+    <!-- Arbitrage Calculator -->
+    <section class="glass rounded-2xl shadow-2xl p-8">
+      <h2 class="text-2xl font-semibold mb-6">Arbitrage Calculator</h2>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label for="numOutcomes" class="block font-semibold mb-2">Number of Outcomes:</label>
+          <select id="numOutcomes" onchange="setupArbInputs()" class="w-full p-3 rounded-lg border-2 border-purple-300 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600">
+            <option value="2">2 Outcomes</option>
+            <option value="3" selected>3 Outcomes (Win-Draw-Lose)</option>
+            <option value="4">4 Outcomes</option>
+            <option value="5">5 Outcomes</option>
+          </select>
+        </div>
+        <div>
+          <label for="totalStake" class="block font-semibold mb-2">Total Stake ($):</label>
+          <input id="totalStake" type="number" min="1" step="1" value="100" class="w-full p-3 rounded-lg border-2 border-purple-500 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600" placeholder="Enter total stake amount" />
+        </div>
+      </div>
+
+      <div id="arbOddsInputs" class="mb-6"></div>
+
+      <button onclick="calculateArbitrage()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-4 rounded-lg transition">
+        Calculate Arbitrage
+      </button>
+
+      <div id="arbResult" class="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-400 rounded-r-lg text-yellow-800 text-lg font-semibold whitespace-pre-wrap"></div>
+    </section>
+
+    <!-- Kelly Criterion Calculator -->
+    <section class="glass rounded-2xl shadow-2xl p-8">
+      <h2 class="text-2xl font-semibold mb-6">Kelly Criterion Calculator</h2>
+      <p class="text-gray-300 mb-6">Optimize your bet sizing for long-term growth. The Kelly Criterion helps determine the optimal stake based on your edge.</p>
+      
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label for="bankroll" class="block font-semibold mb-2">Bankroll ($):</label>
+          <input id="bankroll" type="number" min="1" step="1" value="1000" class="w-full p-3 rounded-lg border-2 border-purple-300 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600" placeholder="Enter your total bankroll" />
+        </div>
+        <div>
+          <label for="kellyOdds" class="block font-semibold mb-2">Decimal Odds:</label>
+          <input id="kellyOdds" type="number" step="0.01" min="1" value="2.0" class="w-full p-3 rounded-lg border-2 border-purple-500 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600" placeholder="Enter decimal odds" />
+        </div>
+      </div>
+      
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label for="winProbability" class="block font-semibold mb-2">Estimated Win Probability (%):</label>
+          <input id="winProbability" type="number" step="0.1" min="0.1" max="99.9" value="55" class="w-full p-3 rounded-lg border-2 border-purple-300 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600" placeholder="Enter your estimated win probability" />
+        </div>
+        <div>
+          <label for="kellyFraction" class="block font-semibold mb-2">Kelly Fraction (%):</label>
+          <select id="kellyFraction" class="w-full p-3 rounded-lg border-2 border-purple-500 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600">
+            <option value="1">Full Kelly (100%) - Maximum growth, higher risk</option>
+            <option value="0.5" selected>Half Kelly (50%) - Balanced approach</option>
+            <option value="0.25">Quarter Kelly (25%) - Conservative</option>
+            <option value="0.1">Tenth Kelly (10%) - Very conservative</option>
+            <option value="custom">Custom Fraction</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="customFractionContainer" class="hidden mb-6">
+        <label for="customFraction" class="block font-semibold mb-2">Custom Kelly Fraction (%):</label>
+        <input id="customFraction" type="number" step="1" min="1" max="100" value="50" class="w-full p-3 rounded-lg border-2 border-purple-300 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600" placeholder="Enter custom Kelly fraction (1-100%)" />
+      </div>
+
+      <button onclick="calculateKelly()" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-4 rounded-lg transition">
+        Calculate Optimal Bet Size
+      </button>
+
+      <div id="kellyResult" class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-400 rounded-r-lg text-blue-800 text-lg font-semibold whitespace-pre-wrap"></div>
+    </section>
+
+    <!-- Stake & Payout Calculator -->
+    <section class="glass rounded-2xl shadow-2xl p-8">
+      <h2 class="text-2xl font-semibold mb-6">Stake &amp; Payout Calculator</h2>
+      <label class="block font-semibold mb-2">Stake Amount:</label>
+      <input id="stakeInput" type="number" min="0" class="border p-3 rounded-lg w-full mb-6 bg-gray-900 text-gray-200 border-purple-500" placeholder="Enter stake amount" />
+      
+      <label class="block font-semibold mb-2">Decimal Odds:</label>
+      <input id="oddsInput" type="number" step="0.01" min="1" class="border p-3 rounded-lg w-full mb-6 bg-gray-900 text-gray-200 border-purple-500" placeholder="Enter decimal odds" />
+
+      <button onclick="calculatePayout()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-4 rounded-lg transition">
+        Calculate
+      </button>
+
+      <div id="payoutResult" class="mt-6 text-lg font-semibold text-yellow-400"></div>
+    </section>
+
+    <!-- Parlay / Multi-Bet Builder -->
+    <section class="glass rounded-2xl shadow-2xl p-8">
+      <h2 class="text-2xl font-semibold mb-6">Parlay / Multi-Bet Builder</h2>
+      <div id="parlayBets" class="mb-6">
+        <input type="number" step="0.01" min="1" class="border p-3 rounded-lg w-full mb-4 bg-gray-900 text-gray-200 border-purple-500 parlayOdd" placeholder="Enter decimal odds for bet 1" />
+      </div>
+      <div class="flex gap-4 mb-6">
+        <button onclick="addParlayBet()" class="flex-1 bg-green-600 hover:bg-green-700 transition rounded-lg text-white font-semibold py-3">Add Another Bet</button>
+        <button onclick="calculateParlay()" class="flex-1 bg-purple-600 hover:bg-purple-700 transition rounded-lg text-white font-semibold py-3">Calculate Parlay</button>
+      </div>
+      <div id="parlayResult" class="text-lg font-semibold text-yellow-400"></div>
+    </section>
+
+    <!-- Odds Format Converter -->
+    <section class="glass rounded-2xl shadow-2xl p-8">
+      <h2 class="text-2xl font-semibold mb-6">Odds Format Converter</h2>
+      <label class="block font-semibold mb-2">Enter Odds:</label>
+      <input id="oddsConverterInput" type="text" class="border p-3 rounded-lg w-full mb-6 bg-gray-900 text-gray-200 border-purple-500" placeholder="Decimal (e.g. 2.5), Fractional (e.g. 3/2), American (e.g. +150 or -200)" />
+      <button onclick="convertOdds()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-4 rounded-lg transition">
+        Convert
+      </button>
+      <div id="conversionResult" class="mt-6 text-yellow-400 text-lg font-semibold whitespace-pre-wrap"></div>
+    </section>
+
+
+    <div class="text-center text-gray-500 text-sm mt-12">
+      OddsEdge &mdash; Intelligent Betting Tools
+    </div>
+  </div>
+
+  <script>
+    // Auto-fill arbitrage calculator from URL parameters
+    function autoFillArbitrageFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const oddsParam = urlParams.get('odds');
+      const stakeParam = urlParams.get('stake');
+      
+      if (stakeParam) {
+        const stake = parseFloat(stakeParam);
+        if (!isNaN(stake) && stake > 0) {
+          document.getElementById('totalStake').value = stake;
+        }
+      }
+      
+      if (oddsParam) {
+        try {
+          const oddsArray = oddsParam.split(',').map(Number).filter(odd => !isNaN(odd) && odd >= 1);
+          
+          if (oddsArray.length >= 2) {
+            // Set the number of outcomes dropdown
+            const numOutcomesSelect = document.getElementById('numOutcomes');
+            numOutcomesSelect.value = Math.max(2, Math.min(5, oddsArray.length));
+            
+            // Setup inputs
+            setupArbInputs();
+            
+            // Fill the inputs with the odds
+            const inputs = document.querySelectorAll('#arbOddsInputs input');
+            oddsArray.forEach((odd, index) => {
+              if (inputs[index]) {
+                inputs[index].value = odd.toFixed(2);
+              }
+            });
+            
+            // Auto-calculate if we have valid odds
+            setTimeout(() => {
+              calculateArbitrage();
+            }, 500);
+            
+            // Show success message
+            const arbResult = document.getElementById('arbResult');
+            arbResult.textContent = `✅ Auto-filled ${oddsArray.length} odds from URL\nCalculating arbitrage...`;
+            arbResult.className = 'mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-400 rounded-r-lg text-green-800 text-lg font-semibold whitespace-pre-wrap';
+          }
+        } catch (error) {
+          console.log('Could not auto-fill from URL parameters:', error);
+        }
+      }
+    }
+
+    // Stake & Payout Calculator
+    function calculatePayout() {
+      const stake = parseFloat(document.getElementById('stakeInput').value);
+      const odds = parseFloat(document.getElementById('oddsInput').value);
+      if (isNaN(stake) || isNaN(odds) || stake <= 0 || odds < 1) {
+        alert('Please enter valid stake and odds');
+        return;
+      }
+      const payout = stake * odds;
+      const profit = payout - stake;
+      document.getElementById('payoutResult').textContent = `Payout: $${payout.toFixed(2)}, Profit: $${profit.toFixed(2)}`;
+    }
+
+    // Parlay / Multi-Bet Builder
+    function addParlayBet() {
+      const container = document.getElementById('parlayBets');
+      const count = container.children.length + 1;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.01';
+      input.min = '1';
+      input.placeholder = `Enter decimal odds for bet ${count}`;
+      input.className = 'border p-3 rounded-lg w-full mb-4 bg-gray-900 text-gray-200 border-purple-500 parlayOdd';
+      container.appendChild(input);
+    }
+
+    function calculateParlay() {
+      const inputs = document.querySelectorAll('.parlayOdd');
+      const odds = [];
+      inputs.forEach(input => {
+        const val = parseFloat(input.value);
+        if (isNaN(val) || val < 1) return;
+        odds.push(val);
+      });
+      if (odds.length < 2) {
+        alert('Add at least two valid odds for parlay');
+        return;
+      }
+      const combinedOdds = odds.reduce((total, o) => total * o, 1);
+      document.getElementById('parlayResult').textContent = `Combined Odds: ${combinedOdds.toFixed(2)}`;
+    }
+
+    // Odds Format Converter
+    function convertOdds() {
+      const input = document.getElementById('oddsConverterInput').value.trim();
+      if (!input) {
+        alert('Enter odds to convert');
+        return;
+      }
+
+      let decimal, fractional, american;
+
+      if (input.includes('/')) {
+        // Fractional to Decimal and American
+        const parts = input.split('/');
+        if (parts.length === 2) {
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+            decimal = numerator / denominator + 1;
+          }
+        }
+      } else if (input.startsWith('+') || input.startsWith('-')) {
+        // American to Decimal
+        const americanVal = parseFloat(input);
+        if (!isNaN(americanVal)) {
+          if (americanVal > 0) decimal = (americanVal / 100) + 1;
+          else decimal = (100 / Math.abs(americanVal)) + 1;
+        }
+      } else {
+        // Assume decimal
+        decimal = parseFloat(input);
+      }
+
+      if (!decimal || decimal < 1) {
+        alert('Invalid odds format');
+        return;
+      }
+
+      fractional = decimalToFractional(decimal);
+      american = decimalToAmerican(decimal);
+      const impliedProb = (1 / decimal) * 100;
+
+      document.getElementById('conversionResult').innerHTML = `
+        Decimal: ${decimal.toFixed(2)}<br/>
+        Fractional: ${fractional}<br/>
+        American: ${american}<br/>
+        Implied Probability: ${impliedProb.toFixed(2)}%
+      `;
+    }
+
+    function decimalToFractional(decimal) {
+      const frac = decimal - 1;
+      const precision = 1000;
+      let numerator = Math.round(frac * precision);
+      let denominator = precision;
+
+      const gcd = (a, b) => b ? gcd(b, a % b) : a;
+      const gcdVal = gcd(numerator, denominator);
+      numerator /= gcdVal;
+      denominator /= gcdVal;
+
+      return `${numerator}/${denominator}`;
+    }
+
+    function decimalToAmerican(decimal) {
+      if (decimal >= 2) {
+        return `+${Math.round((decimal - 1) * 100)}`;
+      }
+      return `${Math.round(-100 / (decimal - 1))}`;
+    }
+
+    // Arbitrage Calculator
+    function setupArbInputs() {
+      const container = document.getElementById('arbOddsInputs');
+      const count = parseInt(document.getElementById('numOutcomes').value, 10);
+
+      container.innerHTML = '';
+      for (let i = 1; i <= count; i++) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.01';
+        input.min = '1';
+        input.placeholder = `Odds for Outcome ${i}`;
+        input.className = 'block w-full mb-4 p-3 rounded-lg border-2 border-purple-500 bg-gray-900 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-600';
+        container.appendChild(input);
+      }
+    }
+
+    function calculateArbitrage() {
+      const inputs = document.querySelectorAll('#arbOddsInputs input');
+      const totalStake = parseFloat(document.getElementById('totalStake').value);
+      const odds = [];
+
+      // Validate total stake
+      if (isNaN(totalStake) || totalStake <= 0) {
+        alert('Please enter a valid total stake amount');
+        return;
+      }
+
+      // Validate odds
+      for (const input of inputs) {
+        const val = parseFloat(input.value);
+        if (isNaN(val) || val < 1) {
+          alert('Please enter valid decimal odds (>= 1) for all outcomes');
+          return;
+        }
+        odds.push(val);
+      }
+
+      const impliedSum = odds.reduce((sum, o) => sum + (1 / o), 0);
+      const arbExists = impliedSum < 1;
+
+      let output = `Sum of implied probabilities: ${impliedSum.toFixed(4)}\n`;
+      output += `Total Stake: $${totalStake.toFixed(2)}\n\n`;
+
+      if (arbExists) {
+        const arbPercent = (1 - impliedSum) * 100;
+
+        const stakes = odds.map(o => (totalStake / o) / impliedSum);
+        const payout = totalStake / impliedSum;
+        const profit = payout - totalStake;
+
+        output += `🎉 Arbitrage Opportunity Found!\nProfit: $${profit.toFixed(2)} (${arbPercent.toFixed(2)}% ROI)\n\n`;
+        output += `Stake Distribution:\n`;
+        stakes.forEach((s, i) => {
+          const percentage = (s / totalStake) * 100;
+          output += `  • Outcome ${i + 1}: $${s.toFixed(2)} (${percentage.toFixed(1)}%) @ ${odds[i].toFixed(2)} odds\n`;
+        });
+        output += `\nGuaranteed Payout: $${payout.toFixed(2)}\n`;
+        output += `Risk-Free Profit: $${profit.toFixed(2)}`;
+        
+        // Set success styling
+        document.getElementById('arbResult').className = 'mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-400 rounded-r-lg text-green-800 text-lg font-semibold whitespace-pre-wrap';
+      } else {
+        output += `❌ No arbitrage opportunity detected.\n`;
+        output += `The market is efficient (or bookmakers have built-in margin).\n`;
+        output += `Try finding better odds from different bookmakers.`;
+        
+        // Set neutral styling
+        document.getElementById('arbResult').className = 'mt-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-400 rounded-r-lg text-yellow-800 text-lg font-semibold whitespace-pre-wrap';
+      }
+
+      document.getElementById('arbResult').textContent = output;
+    }
+
+    // Also update the main page to pass stake parameter
+    function openArbCalculator(oddsArray) {
+      if (!oddsArray || oddsArray.length === 0) {
+        alert('No valid odds available for arbitrage calculation.');
+        return;
+      }
+      const oddsParam = encodeURIComponent(oddsArray.join(','));
+      
+      // You can add a prompt for stake amount or use a default
+      const stakeAmount = prompt('Enter your total stake amount ($):', '100');
+      const stakeParam = stakeAmount ? encodeURIComponent(stakeAmount) : '100';
+      
+      const url = `oddsedge-cal.html?odds=${oddsParam}&stake=${stakeParam}`;
+      window.open(url, '_blank');
+    }
+
+    // Kelly Criterion Calculator
+    function calculateKelly() {
+      const bankroll = parseFloat(document.getElementById('bankroll').value);
+      const odds = parseFloat(document.getElementById('kellyOdds').value);
+      const winProbability = parseFloat(document.getElementById('winProbability').value) / 100;
+      const kellyFractionType = document.getElementById('kellyFraction').value;
+      
+      let kellyFraction;
+      if (kellyFractionType === 'custom') {
+        kellyFraction = parseFloat(document.getElementById('customFraction').value) / 100;
+      } else {
+        kellyFraction = parseFloat(kellyFractionType);
+      }
+
+      // Validate inputs
+      if (isNaN(bankroll) || bankroll <= 0) {
+        alert('Please enter a valid bankroll amount');
+        return;
+      }
+      if (isNaN(odds) || odds < 1) {
+        alert('Please enter valid decimal odds (>= 1)');
+        return;
+      }
+      if (isNaN(winProbability) || winProbability <= 0 || winProbability >= 1) {
+        alert('Please enter a valid win probability between 0.1% and 99.9%');
+        return;
+      }
+      if (isNaN(kellyFraction) || kellyFraction <= 0 || kellyFraction > 1) {
+        alert('Please enter a valid Kelly fraction');
+        return;
+      }
+
+      // Calculate full Kelly percentage
+      const lossProbability = 1 - winProbability;
+      const fullKellyPercentage = (winProbability * (odds - 1) - lossProbability) / (odds - 1);
+      
+      let output = '';
+      
+      if (fullKellyPercentage <= 0) {
+        output = `❌ No Bet Recommended\n\n`;
+        output += `Based on your inputs:\n`;
+        output += `• Odds: ${odds.toFixed(2)}\n`;
+        output += `• Estimated Win Probability: ${(winProbability * 100).toFixed(1)}%\n`;
+        output += `• Implied Fair Odds: ${(1 / winProbability).toFixed(2)}\n\n`;
+        output += `The bet has negative expected value. Avoid this bet.`;
+        
+        document.getElementById('kellyResult').className = 'mt-6 p-4 bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-400 rounded-r-lg text-red-800 text-lg font-semibold whitespace-pre-wrap';
+      } else {
+        // Apply Kelly fraction
+        const actualKellyPercentage = fullKellyPercentage * kellyFraction;
+        const recommendedStake = bankroll * actualKellyPercentage;
+        
+        // Calculate expected value metrics
+        const expectedValue = (winProbability * (odds - 1) * 100 - lossProbability * 100);
+        const expectedGrowth = (winProbability * Math.log(1 + actualKellyPercentage * (odds - 1)) + 
+                               lossProbability * Math.log(1 - actualKellyPercentage)) * 100;
+        
+        output = `💰 Optimal Bet Sizing\n\n`;
+        output += `Full Kelly Stake: $${(bankroll * fullKellyPercentage).toFixed(2)} (${(fullKellyPercentage * 100).toFixed(2)}% of bankroll)\n`;
+        output += `Recommended Stake: $${recommendedStake.toFixed(2)} (${(actualKellyPercentage * 100).toFixed(2)}% of bankroll)\n\n`;
+        output += `Key Metrics:\n`;
+        output += `• Expected Value: ${expectedValue.toFixed(2)}%\n`;
+        output += `• Expected Growth: ${expectedGrowth.toFixed(4)}%\n`;
+        output += `• Edge: ${((winProbability * odds - 1) * 100).toFixed(2)}%\n`;
+        output += `• Implied Fair Odds: ${(1 / winProbability).toFixed(2)}\n\n`;
+        
+        if (actualKellyPercentage > 0.1) {
+          output += `⚠️  Warning: Bet size exceeds 10% of bankroll. Consider using a smaller Kelly fraction.`;
+        } else {
+          output += `✅ Bet size is within conservative limits.`;
+        }
+        
+        document.getElementById('kellyResult').className = 'mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-400 rounded-r-lg text-blue-800 text-lg font-semibold whitespace-pre-wrap';
+      }
+      
+      document.getElementById('kellyResult').textContent = output;
+    }
+
+    // Show/hide custom fraction input
+    document.getElementById('kellyFraction').addEventListener('change', function() {
+      const customContainer = document.getElementById('customFractionContainer');
+      if (this.value === 'custom') {
+        customContainer.classList.remove('hidden');
+      } else {
+        customContainer.classList.add('hidden');
+      }
+    });
+
+    // Auto-fill arbitrage calculator from URL parameters
+    function autoFillArbitrageFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const oddsParam = urlParams.get('odds');
+      const stakeParam = urlParams.get('stake');
+      
+      if (stakeParam) {
+        const stake = parseFloat(stakeParam);
+        if (!isNaN(stake) && stake > 0) {
+          document.getElementById('totalStake').value = stake;
+        }
+      }
+      
+      if (oddsParam) {
+        try {
+          const oddsArray = oddsParam.split(',').map(Number).filter(odd => !isNaN(odd) && odd >= 1);
+          
+          if (oddsArray.length >= 2) {
+            // Set the number of outcomes dropdown
+            const numOutcomesSelect = document.getElementById('numOutcomes');
+            numOutcomesSelect.value = Math.max(2, Math.min(5, oddsArray.length));
+            
+            // Setup inputs
+            setupArbInputs();
+            
+            // Fill the inputs with the odds
+            const inputs = document.querySelectorAll('#arbOddsInputs input');
+            oddsArray.forEach((odd, index) => {
+              if (inputs[index]) {
+                inputs[index].value = odd.toFixed(2);
+              }
+            });
+            
+            // Auto-calculate if we have valid odds
+            setTimeout(() => {
+              calculateArbitrage();
+            }, 500);
+            
+            // Show success message
+            const arbResult = document.getElementById('arbResult');
+            arbResult.textContent = `✅ Auto-filled ${oddsArray.length} odds from URL\nCalculating arbitrage...`;
+            arbResult.className = 'mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-400 rounded-r-lg text-green-800 text-lg font-semibold whitespace-pre-wrap';
+          }
+        } catch (error) {
+          console.log('Could not auto-fill from URL parameters:', error);
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setupArbInputs();
+      autoFillArbitrageFromURL();
+    });
+  </script>
+</body>
+</html>
