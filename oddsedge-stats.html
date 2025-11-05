@@ -1,598 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OddsEdge — Offline Match Statistics (No API)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OddsEdge — AI Match Insights (API Mode)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root{--bg1:#0f172a;--bg2:#1e293b;--bg3:#334155}
-    body{background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);min-height:100vh}
-    .glass{background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25)}
-    .gradient-text{background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 50%,#ec4899 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-    .stat-bar{transition:width .4s ease}
-    .badge{width:2rem;height:2rem;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.875rem}
-    @media (prefers-reduced-motion:reduce){.stat-bar{transition:none}}
-    pre.sample{white-space:pre-wrap}
+    body{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);min-height:100vh}
+    .glass{background:rgba(255,255,255,.96);backdrop-filter:blur(10px)}
+    .spin{border:3px solid #e5e7eb;border-top:3px solid #6366f1;border-radius:50%;width:34px;height:34px;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .badge{padding:.25rem .5rem;border-radius:.5rem;font-size:.75rem;font-weight:700}
   </style>
 </head>
-<body class="p-4 text-slate-800">
+<body class="p-4">
   <div class="max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="glass rounded-2xl shadow-2xl p-4 mb-5">
-      <div class="flex items-center justify-between flex-wrap gap-3">
+    <div class="glass rounded-2xl shadow-2xl p-5 mb-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 class="text-3xl font-black gradient-text">OddsEdge — Offline Match Analysis</h1>
-          <p class="text-sm text-slate-600">Paste results or upload CSV — no external APIs required.</p>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-fuchsia-600 bg-clip-text text-transparent">OddsEdge — AI Insights</h1>
+          <p class="text-slate-600 text-sm">Select league & teams → auto-fetch H2H, form, BTTS, corners, and AI picks</p>
         </div>
-        <div class="flex gap-3">
-          <a href="index.html" class="text-purple-700 font-semibold hover:underline">← Home</a>
-          <a href="oddsedge-live.html" class="text-purple-700 font-semibold hover:underline">Live Odds</a>
-        </div>
+        <a href="index.html" class="text-indigo-600 font-semibold">← Home</a>
       </div>
     </div>
 
-    <!-- How to use -->
+    <!-- Config -->
     <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-      <h2 class="text-xl font-bold mb-3">🛠️ How it works (No API)</h2>
-      <ol class="list-decimal ml-5 text-sm text-slate-700 space-y-1">
-        <li>Enter team names below.</li>
-        <li>Paste each team's recent fixtures (<em>any league</em>) or upload a CSV. We parse <strong>date, home, away, score</strong>.</li>
-        <li>Optionally paste a combined H2H block or let us infer H2H from both feeds.</li>
-        <li>Click <strong>Analyze</strong>. We'll compute form, averages, clean sheets, draw rate, H2H, and heuristic insights.</li>
-      </ol>
-      <details class="mt-3">
-        <summary class="cursor-pointer text-sm font-semibold text-slate-800">Accepted text formats (examples)</summary>
-        <div class="mt-2 grid md:grid-cols-2 gap-4 text-xs">
-          <pre class="sample bg-slate-50 p-3 rounded">2025-10-18, Arsenal 3-1 Spurs
-2025/10/05 Arsenal 2-0 Chelsea
-18 Sep 2025, Man City 1-1 Arsenal
-Arsenal 0-2 Liverpool (2025-08-30)</pre>
-          <pre class="sample bg-slate-50 p-3 rounded">CSV: date,home,away,home_goals,away_goals,competition
-2025-10-18,Arsenal,Spurs,3,1,Premier League
-2025-10-05,Arsenal,Chelsea,2,0,Premier League
-2025-09-18,Man City,Arsenal,1,1,UCL</pre>
+      <h2 class="text-xl font-bold text-slate-800 mb-4">🔑 API-Football (RapidAPI)</h2>
+      <div class="grid md:grid-cols-3 gap-4 mb-3">
+        <div class="md:col-span-2">
+          <label class="text-sm font-semibold text-slate-700">RapidAPI Key</label>
+          <input type="password" id="apiKey" placeholder="Enter X-RapidAPI-Key" class="w-full p-3 border-2 rounded focus:border-indigo-500" />
+          <p class="text-xs text-slate-500 mt-1">Dev tip: keep the key in a server proxy for production.</p>
         </div>
-      </details>
+        <div>
+          <label class="text-sm font-semibold text-slate-700">Season</label>
+          <select id="seasonSelect" class="w-full p-3 border-2 rounded focus:border-indigo-500">
+            <!-- populated dynamically from selected league current season -->
+            <option value="">Auto</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="text-sm font-semibold text-slate-700">League</label>
+          <select id="leagueSelect" class="w-full p-3 border-2 rounded focus:border-indigo-500">
+            <option value="">Loading leagues…</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700">Team 1</label>
+          <select id="team1Select" class="w-full p-3 border-2 rounded focus:border-indigo-500" disabled>
+            <option value="">Select league first</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700">Team 2</label>
+          <select id="team2Select" class="w-full p-3 border-2 rounded focus:border-indigo-500" disabled>
+            <option value="">Select league first</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 mt-4">
+        <button id="loadTeamsBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded disabled:opacity-50">Load Teams</button>
+        <button id="analyzeBtn" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold py-2.5 px-5 rounded disabled:opacity-50" disabled>Analyze Match</button>
+        <div id="statusMsg" class="text-sm text-slate-600"></div>
+      </div>
     </div>
 
-    <!-- Inputs -->
-    <div class="grid md:grid-cols-2 gap-5 mb-5">
+    <!-- Loading -->
+    <div id="loadingBox" class="hidden glass rounded-2xl shadow-2xl p-10 mb-5 text-center">
+      <div class="spin mx-auto mb-3"></div>
+      <div class="text-slate-700 font-semibold">Crunching numbers…</div>
+    </div>
+
+    <!-- Output -->
+    <div id="output" class="hidden space-y-5">
+      <!-- Match Header -->
       <div class="glass rounded-2xl shadow-2xl p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-lg font-bold">Team 1</h3>
-          <div class="flex gap-2">
-            <label class="text-xs px-2 py-1 border rounded cursor-pointer">Upload CSV
-              <input type="file" id="team1Csv" accept=".csv,text/csv" class="hidden" />
-            </label>
-            <button id="team1Sample" class="text-xs px-2 py-1 border rounded">Sample</button>
-          </div>
-        </div>
-        <input id="team1Name" class="w-full p-2 border-2 rounded mb-2" placeholder="e.g., Arsenal" />
-        <textarea id="team1Text" class="w-full p-3 border-2 rounded h-44 font-mono text-sm" placeholder="Paste Team 1 recent matches here..."></textarea>
-      </div>
-
-      <div class="glass rounded-2xl shadow-2xl p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-lg font-bold">Team 2</h3>
-          <div class="flex gap-2">
-            <label class="text-xs px-2 py-1 border rounded cursor-pointer">Upload CSV
-              <input type="file" id="team2Csv" accept=".csv,text/csv" class="hidden" />
-            </label>
-            <button id="team2Sample" class="text-xs px-2 py-1 border rounded">Sample</button>
-          </div>
-        </div>
-        <input id="team2Name" class="w-full p-2 border-2 rounded mb-2" placeholder="e.g., Spurs" />
-        <textarea id="team2Text" class="w-full p-3 border-2 rounded h-44 font-mono text-sm" placeholder="Paste Team 2 recent matches here..."></textarea>
-      </div>
-    </div>
-
-    <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-bold">(Optional) Head-to-Head Paste</h3>
-        <button id="h2hSample" class="text-xs px-2 py-1 border rounded">Sample H2H</button>
-      </div>
-      <textarea id="h2hText" class="w-full p-3 border-2 rounded h-32 font-mono text-sm" placeholder="If you have a direct H2H dump, paste it here (same formats accepted)."></textarea>
-      <div class="mt-3 flex flex-wrap items-center gap-3 text-sm">
-        <label>Use last
-          <input id="lastN" type="number" min="3" max="20" value="10" class="w-16 ml-1 p-1 border-2 rounded" />
-          games per team</label>
-        <label class="inline-flex items-center gap-2"><input id="balanceHomeAway" type="checkbox" class="scale-110" /> Balance home/away (if possible)</label>
-        <button id="analyzeBtn" class="ml-auto bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-5 py-2 rounded-xl">Analyze</button>
-      </div>
-    </div>
-    <!-- Quick Result Search & Import (No API) -->
-    <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-      <h3 class="text-xl font-bold mb-3">🔎 Quick Result Search & Import (No API)</h3>
-      <p class="text-sm text-slate-600 mb-3">Open trusted sites with the right queries, then copy results and <em>Paste</em> directly below. This keeps everything client‑side.</p>
-
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <div class="text-sm font-semibold mb-2">Open web searches</div>
-          <div class="flex flex-wrap gap-2">
-            <button class="px-3 py-2 rounded bg-blue-600 text-white text-sm" onclick="openSearch('google','h2h')">Google H2H</button>
-            <button class="px-3 py-2 rounded bg-indigo-600 text-white text-sm" onclick="openSearch('google','fixtures1')">Google Fixtures — Team 1</button>
-            <button class="px-3 py-2 rounded bg-indigo-600 text-white text-sm" onclick="openSearch('google','fixtures2')">Google Fixtures — Team 2</button>
-            <button class="px-3 py-2 rounded bg-emerald-600 text-white text-sm" onclick="openSearch('sofascore','search')">SofaScore Search</button>
-            <button class="px-3 py-2 rounded bg-rose-600 text-white text-sm" onclick="openSearch('flashscore','search')">Flashscore Search</button>
-            <button class="px-3 py-2 rounded bg-gray-800 text-white text-sm" onclick="openSearch('livescore','search')">LiveScore Search</button>
-          </div>
-          <p class="text-xs text-slate-500 mt-2">Tip: add dates in the browser (e.g., <code>2025</code>, <code>last 10</code>) to narrow results.</p>
-        </div>
-        <div>
-          <div class="text-sm font-semibold mb-2">Paste from clipboard (auto‑parse)</div>
-          <div class="flex flex-wrap gap-2">
-            <button class="px-3 py-2 rounded border text-sm" onclick="pasteInto('team1Text')">📋 Paste → Team 1</button>
-            <button class="px-3 py-2 rounded border text-sm" onclick="pasteInto('team2Text')">📋 Paste → Team 2</button>
-            <button class="px-3 py-2 rounded border text-sm" onclick="pasteInto('h2hText')">📋 Paste → H2H</button>
-          </div>
-          <p class="text-xs text-slate-500 mt-2">Works with plain text or CSV tables copied from sites like SofaScore/Flashscore/ESPN.</p>
+        <div class="text-center">
+          <h2 class="text-3xl font-bold text-slate-800"><span id="mhT1">Team 1</span> vs <span id="mhT2">Team 2</span></h2>
+          <p class="text-slate-600" id="mhLeague">League • Season</p>
         </div>
       </div>
-    </div>
 
-    <!-- Results -->
-    <div id="results" class="hidden">
-      <div class="glass rounded-2xl shadow-2xl p-6 mb-5 text-center">
-        <h2 class="text-3xl font-bold mb-1"><span id="rTeam1">Team 1</span> vs <span id="rTeam2">Team 2</span></h2>
-        <p class="text-slate-600">Offline analysis from your pasted data</p>
-      </div>
-
-      <!-- Quick Comparison -->
-      <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-        <h3 class="text-2xl font-bold text-center mb-6">Quick Comparison</h3>
-        <div class="grid md:grid-cols-3 gap-6">
+      <!-- Quick KPIs -->
+      <div class="grid md:grid-cols-3 gap-5">
+        <div class="glass rounded-2xl p-6">
           <div class="text-center">
-            <div id="t1WinPct" class="text-5xl font-extrabold text-blue-600">0%</div>
-            <div class="text-sm text-slate-600">Win Rate (Last N)</div>
-            <div id="t1Record" class="text-xs text-slate-500 mt-1">0W-0D-0L</div>
+            <div class="text-4xl font-extrabold text-indigo-600" id="kpiBTTS">--%</div>
+            <div class="text-sm text-slate-600">BTTS (combined last 10)</div>
           </div>
+          <div class="mt-4 text-center text-xs text-slate-500" id="kpiBTTSNote"></div>
+        </div>
+        <div class="glass rounded-2xl p-6">
           <div class="text-center">
-            <div id="drawPct" class="text-5xl font-extrabold text-yellow-600">0%</div>
-            <div class="text-sm text-slate-600">Draw Rate (combined)</div>
-            <div class="text-xs text-slate-500 mt-1">Recent matches</div>
+            <div class="text-4xl font-extrabold text-emerald-600" id="kpiO25">--%</div>
+            <div class="text-sm text-slate-600">Over 2.5 Goals (combined last 10)</div>
           </div>
+          <div class="mt-4 text-center text-xs text-slate-500" id="kpiO25Note"></div>
+        </div>
+        <div class="glass rounded-2xl p-6">
           <div class="text-center">
-            <div id="t2WinPct" class="text-5xl font-extrabold text-red-600">0%</div>
-            <div class="text-sm text-slate-600">Win Rate (Last N)</div>
-            <div id="t2Record" class="text-xs text-slate-500 mt-1">0W-0D-0L</div>
+            <div class="text-4xl font-extrabold text-rose-600" id="kpiCorners">--</div>
+            <div class="text-sm text-slate-600">Avg Total Corners (last 5 each)</div>
           </div>
+          <div class="mt-4 text-center text-xs text-slate-500" id="kpiCornersNote"></div>
         </div>
       </div>
 
       <!-- H2H -->
-      <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-        <h3 class="text-2xl font-bold mb-4">Head‑to‑Head (last up to 10)</h3>
-        <div class="mb-3 flex justify-between text-sm">
-          <span class="font-semibold">Summary</span>
-          <span id="h2hSummary" class="text-slate-600">—</span>
-        </div>
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Head‑to‑Head (last 10)</h3>
         <div class="flex h-8 rounded overflow-hidden">
-          <div id="h2hBar1" class="stat-bar bg-blue-500 text-white text-sm font-bold flex items-center justify-center" style="width:33%">0</div>
-          <div id="h2hBarD" class="stat-bar bg-yellow-500 text-white text-sm font-bold flex items-center justify-center" style="width:34%">0</div>
-          <div id="h2hBar2" class="stat-bar bg-red-500 text-white text-sm font-bold flex items-center justify-center" style="width:33%">0</div>
+          <div id="h2hT1Bar" class="bg-indigo-500 text-white text-sm flex items-center justify-center" style="width:33%">0</div>
+          <div id="h2hDrawBar" class="bg-amber-500 text-white text-sm flex items-center justify-center" style="width:33%">0</div>
+          <div id="h2hT2Bar" class="bg-rose-500 text-white text-sm flex items-center justify-center" style="width:34%">0</div>
         </div>
-        <div id="h2hList" class="mt-3 grid gap-2"></div>
+        <div class="flex justify-between text-xs text-slate-600 mt-2">
+          <span id="h2hT1Lbl">Team 1 Wins</span>
+          <span>Draws</span>
+          <span id="h2hT2Lbl">Team 2 Wins</span>
+        </div>
+        <div id="h2hList" class="mt-4 grid md:grid-cols-2 gap-2"></div>
       </div>
 
       <!-- Recent Form -->
-      <div class="grid md:grid-cols-2 gap-5 mb-5">
-        <div class="glass rounded-2xl shadow-2xl p-6">
-          <h4 id="t1FormTitle" class="text-lg font-bold mb-3">Team 1 — Recent Form</h4>
-          <div class="flex items-center gap-2 mb-3 text-sm"><span class="font-semibold">Last 5:</span><div id="t1Streak" class="flex gap-1"></div></div>
-          <div id="t1List" class="grid gap-2"></div>
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-bold text-slate-800 mb-2" id="t1FormTitle">Team 1 — Recent Form</h3>
+          <div id="t1FormBadges" class="flex gap-1 mb-3"></div>
+          <div id="t1MatchList" class="space-y-2"></div>
         </div>
-        <div class="glass rounded-2xl shadow-2xl p-6">
-          <h4 id="t2FormTitle" class="text-lg font-bold mb-3">Team 2 — Recent Form</h4>
-          <div class="flex items-center gap-2 mb-3 text-sm"><span class="font-semibold">Last 5:</span><div id="t2Streak" class="flex gap-1"></div></div>
-          <div id="t2List" class="grid gap-2"></div>
-        </div>
-      </div>
-
-      <!-- Statistical Breakdown -->
-      <div class="glass rounded-2xl shadow-2xl p-6 mb-5">
-        <h3 class="text-2xl font-bold mb-6">Statistical Breakdown</h3>
-        <div class="space-y-6">
-          <div>
-            <div class="flex justify-between mb-1 text-sm"><span class="font-semibold">Average Goals Scored (per game)</span><span><span id="t1Gf">0.0</span> – <span id="t2Gf">0.0</span></span></div>
-            <div class="flex h-5 rounded overflow-hidden"><div id="barGf1" class="stat-bar bg-blue-500" style="width:50%"></div><div id="barGf2" class="stat-bar bg-red-500" style="width:50%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between mb-1 text-sm"><span class="font-semibold">Average Goals Conceded (per game)</span><span><span id="t1Ga">0.0</span> – <span id="t2Ga">0.0</span></span></div>
-            <div class="flex h-5 rounded overflow-hidden"><div id="barGa1" class="stat-bar bg-blue-400" style="width:50%"></div><div id="barGa2" class="stat-bar bg-red-400" style="width:50%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between mb-1 text-sm"><span class="font-semibold">Clean Sheet %</span><span><span id="t1Cs">0%</span> – <span id="t2Cs">0%</span></span></div>
-            <div class="flex h-5 rounded overflow-hidden"><div id="barCs1" class="stat-bar bg-blue-600" style="width:50%"></div><div id="barCs2" class="stat-bar bg-red-600" style="width:50%"></div></div>
-          </div>
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-bold text-slate-800 mb-2" id="t2FormTitle">Team 2 — Recent Form</h3>
+          <div id="t2FormBadges" class="flex gap-1 mb-3"></div>
+          <div id="t2MatchList" class="space-y-2"></div>
         </div>
       </div>
 
-      <!-- AI-ish Insights (heuristics) -->
-      <div class="glass rounded-2xl shadow-2xl p-6 mb-8">
-        <h3 class="text-2xl font-bold mb-4"><span class="gradient-text">🤖 Heuristic Insights (offline)</span></h3>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4">
-            <h4 class="font-bold mb-2">Match Outlook</h4>
-            <div id="outlook" class="text-sm">—</div>
-          </div>
-          <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
-            <h4 class="font-bold mb-2">Potential Value Angles</h4>
-            <div id="values" class="text-sm">—</div>
-          </div>
-          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4">
-            <h4 class="font-bold mb-2">Key Factors</h4>
-            <div id="factors" class="text-sm">—</div>
-          </div>
-          <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
-            <h4 class="font-bold mb-2">Recommendation</h4>
-            <div id="reco" class="text-sm">—</div>
-          </div>
+      <!-- AI Insights -->
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-fuchsia-600 bg-clip-text text-transparent mb-4">🤖 AI Recommendations</h3>
+        <div id="aiCards" class="grid md:grid-cols-2 gap-4"></div>
+        <div class="mt-4 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r">
+          <p class="text-xs text-slate-700"><strong>Disclaimer:</strong> Suggestions are heuristic and informational. Football is uncertain; stake responsibly.</p>
         </div>
-        <p class="mt-4 text-[11px] text-slate-500">Disclaimer: purely statistical heuristics on your provided data. Not financial advice.</p>
       </div>
     </div>
   </div>
 
   <script>
-    // ---------- Parsing helpers ----------
-    function toInt(x){const n=parseInt(x,10);return Number.isFinite(n)?n:null}
-    function trim(s){return (s||'').toString().trim()}
+    // ======= STATE =======
+    let API_KEY = '';
+    const API_HOST = 'api-football-v1.p.rapidapi.com';
+    const BASE = `https://${API_HOST}`;
+    let currentLeague = null; // {id, name}
+    let currentSeason = null; // numeric season year
 
-    // Parse a free-form text block into match objects
-    // Accepts lines like:
-    // 2025-10-18, Arsenal 3-1 Spurs
-    // Arsenal 0-2 Liverpool (2025-08-30)
-    // 2025/10/05 Arsenal 2-0 Chelsea
-    // CSV: date,home,away,home_goals,away_goals,competition
-    function parseBlock(text){
-      const lines = (text||'').split(/\n+/).map(l=>l.trim()).filter(Boolean)
-      const out=[]
-      for(const line of lines){
-        // CSV path first
-        if(line.includes(',') && /\d{4}-\d{2}-\d{2}|\d{4}\/\d{2}\/\d{2}/.test(line.split(',')[0])){
-          const parts=line.split(',')
-          if(parts.length>=5){
-            const [date,home,away,hg,ag]=parts
-            out.push({
-              date:new Date(trim(date)),
-              home:trim(home),
-              away:trim(away),
-              hg:toInt(hg),
-              ag:toInt(ag)
-            })
-            continue
-          }
-        }
-        // Generic text with embedded date optional
-        // Try to find date in parentheses or start
-        let dateMatch = line.match(/(\d{4}[-\/]\d{2}[-\/]\d{2}|\d{1,2} \w{3,} \d{4})/)
-        let date = dateMatch? new Date(dateMatch[0]) : null
-        let core = line.replace(/[()]/g,'').replace(dateMatch?dateMatch[0]:'','').trim()
-        // Find score pattern X-Y
-        let sc = core.match(/(\d{1,2})\s*[-:]\s*(\d{1,2})/)
-        if(!sc) continue
-        const hg = toInt(sc[1]); const ag = toInt(sc[2])
-        const [left,right] = core.split(sc[0])
-        if(!left || !right) continue
-        const home = trim(left)
-        const away = trim(right)
-        out.push({date: date||new Date(), home, away, hg, ag})
-      }
-      // sort newest first
-      out.sort((a,b)=>b.date - a.date)
-      return out
+    // ======= UTIL =======
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => $(id).classList.remove('hidden');
+    const hide = (id) => $(id).classList.add('hidden');
+
+    function setStatus(msg, color='text-slate-600'){ const el=$('statusMsg'); el.className=`text-sm ${color}`; el.textContent=msg; }
+
+    function headers(){ return { 'X-RapidAPI-Key': API_KEY, 'X-RapidAPI-Host': API_HOST }; }
+
+    async function apiJson(path){
+      const r = await fetch(`${BASE}${path}`, { headers: headers() });
+      if(!r.ok){ throw new Error(`API ${r.status}: ${r.statusText}`); }
+      return r.json();
     }
 
-    function ensureLastN(arr,n){return arr.slice(0,n)}
+    function pct(n,d){ return d>0 ? Math.round((n/d)*100) : 0; }
 
-    function computeTeamStats(teamName, matches){
-      let games=matches.length, w=0,d=0,l=0, gf=0, ga=0, clean=0
-      const last5 = matches.slice(0,5)
-      const recentList = []
-      for(const m of matches){
-        const isHome = m.home.toLowerCase().includes(teamName.toLowerCase())
-        const tg = isHome? m.hg : m.ag
-        const og = isHome? m.ag : m.hg
-        gf += tg; ga += og
-        if(tg>og){w++} else if(tg===og){d++} else {l++}
-        if(og===0) clean++
-      }
-      // Build recent display
-      for(const m of last5){
-        const isHome = m.home.toLowerCase().includes(teamName.toLowerCase())
-        const tg = isHome? m.hg : m.ag
-        const og = isHome? m.ag : m.hg
-        const opp = isHome? m.away : m.home
-        const r = tg>og? 'W' : (tg===og? 'D' : 'L')
-        recentList.push({r, line:`${isHome?teamName:opp} ${tg}-${og} ${isHome?opp:teamName}`, date:m.date})
-      }
-      return {
-        games, w,d,l,
-        winPct: games? Math.round(100*w/games) : 0,
-        gfpg: games? (gf/games) : 0,
-        gapg: games? (ga/games) : 0,
-        csPct: games? Math.round(100*clean/games) : 0,
-        recentList
-      }
+    function badge(result){
+      const map = {W:'bg-emerald-500',D:'bg-amber-500',L:'bg-rose-500'};
+      const span = document.createElement('span');
+      span.className = `badge text-white ${map[result]||'bg-slate-400'}`;
+      span.textContent = result;
+      return span;
     }
 
-    function computeDrawPct(t1Matches, t2Matches){
-      const use = [...t1Matches.slice(0,10), ...t2Matches.slice(0,10)]
-      let draws=0
-      for(const m of use){ if(m.hg===m.ag) draws++ }
-      return use.length? Math.round(100*draws/use.length) : 0
+    function fixtureRow(f){
+      const d = new Date(f.fixture.date);
+      const hg = f.goals.home, ag = f.goals.away;
+      const text = `${f.teams.home.name} ${hg} - ${ag} ${f.teams.away.name}`;
+      const res = hg===ag? 'D' : (hg>ag? 'H' : 'A');
+      const pill = res==='D'? 'bg-amber-100 text-amber-700' : (res==='H'? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700');
+      return `<div class="p-3 bg-slate-50 rounded flex items-center justify-between">
+        <span class="text-sm text-slate-800">${text}</span>
+        <span class="text-xs ${pill} px-2 py-1 rounded">${res==='D'?'DRAW':res==='H'?'HOME':'AWAY'}</span>
+      </div>`;
     }
 
-    function inferH2H(team1, team2, t1Matches, t2Matches){
-      // Collect matches where these teams faced each other from either list
-      const pool = [...t1Matches, ...t2Matches]
-      const h2h = []
-      for(const m of pool){
-        const a = m.home.toLowerCase(), b=m.away.toLowerCase()
-        if((a.includes(team1.toLowerCase()) && b.includes(team2.toLowerCase())) ||
-           (a.includes(team2.toLowerCase()) && b.includes(team1.toLowerCase()))){
-          h2h.push(m)
-        }
-      }
-      // Deduplicate identical fixtures by date & teams
-      const key = (m)=> `${m.date.toISOString().slice(0,10)}|${m.home}|${m.away}|${m.hg}-${m.ag}`
-      const map = new Map()
-      for(const m of h2h){ map.set(key(m), m) }
-      const uniq = Array.from(map.values()).sort((a,b)=>b.date-a.date)
-      return uniq.slice(0,10)
+    function sum(arr){ return arr.reduce((a,b)=>a+(+b||0),0); }
+
+    // ======= LOAD LEAGUES =======
+    async function loadLeagues(){
+      setStatus('Loading leagues…');
+      const data = await apiJson('/v3/leagues?type=league&current=true');
+      const leagues = [];
+      (data.response||[]).forEach(item=>{
+        const lg = item.league; const seasons = item.seasons||[];
+        const current = seasons.find(s=>s.current);
+        if(lg && current){ leagues.push({ id: lg.id, name: lg.name, season: current.year }); }
+      });
+      // sort by name
+      leagues.sort((a,b)=>a.name.localeCompare(b.name));
+      const sel = $('leagueSelect');
+      sel.innerHTML = '<option value="">— Select a league —</option>' + leagues.map(l=>`<option value="${l.id}" data-season="${l.season}">${l.name}</option>`).join('');
+      setStatus('Leagues ready. Choose one.','text-emerald-600');
     }
 
-    function parseCsvFile(file, cb){
-      const reader = new FileReader()
-      reader.onload = e => cb(parseBlock(e.target.result))
-      reader.readAsText(file)
+    // ======= LOAD TEAMS =======
+    async function loadTeams(){
+      API_KEY = $('apiKey').value.trim();
+      if(!API_KEY){ setStatus('Enter your RapidAPI key','text-rose-600'); return; }
+      const leagueId = $('leagueSelect').value;
+      if(!leagueId){ setStatus('Select a league','text-rose-600'); return; }
+      const seasonFromLeague = +$('leagueSelect').selectedOptions[0]?.dataset?.season || null;
+      const seasonSel = $('seasonSelect').value ? +$('seasonSelect').value : seasonFromLeague;
+      currentLeague = { id:+leagueId, name:$('leagueSelect').selectedOptions[0].textContent };
+      currentSeason = seasonSel;
+
+      setStatus('Loading teams…');
+      const data = await apiJson(`/v3/teams?league=${leagueId}&season=${seasonSel}`);
+      const teams = (data.response||[]).map(t=>({ id:t.team.id, name:t.team.name })).sort((a,b)=>a.name.localeCompare(b.name));
+      const t1 = $('team1Select'), t2 = $('team2Select');
+      t1.innerHTML = '<option value="">— Team 1 —</option>' + teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+      t2.innerHTML = '<option value="">— Team 2 —</option>' + teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+      t1.disabled = false; t2.disabled = false; $('analyzeBtn').disabled = false;
+      $('mhLeague').textContent = `${currentLeague.name} • ${currentSeason}`;
+      // populate season dropdown (optional override)
+      $('seasonSelect').innerHTML = `<option value="${seasonSel}">${seasonSel}</option>`;
+      setStatus('Teams loaded. Pick two and click Analyze.','text-emerald-600');
     }
 
-    // ---------- UI Wiring ----------
-    const q = (id)=>document.getElementById(id)
+    // ======= ANALYZE =======
+    async function analyze(){
+      const t1 = +$('team1Select').value; const t2 = +$('team2Select').value;
+      const t1Name = $('team1Select').selectedOptions[0]?.textContent || 'Team 1';
+      const t2Name = $('team2Select').selectedOptions[0]?.textContent || 'Team 2';
+      if(!t1 || !t2 || t1===t2){ setStatus('Select two different teams','text-rose-600'); return; }
+      $('mhT1').textContent = t1Name; $('mhT2').textContent = t2Name;
+      $('h2hT1Lbl').textContent = `${t1Name} Wins`; $('h2hT2Lbl').textContent = `${t2Name} Wins`;
 
-    function badge(el, r){
-      const span = document.createElement('span')
-      span.className = `badge ${r==='W'?'bg-green-500 text-white': r==='D'?'bg-yellow-500 text-white':'bg-red-500 text-white'}`
-      span.textContent=r; el.appendChild(span)
-    }
+      hide('output'); show('loadingBox'); setStatus('Fetching fixtures, H2H, and statistics…');
 
-    function percentBars(a,b, elA, elB){
-      const sum = a+b; let pa=50, pb=50
-      if(sum>0){ pa = 100*a/sum; pb = 100*b/sum }
-      elA.style.width = pa.toFixed(1)+'%'; elB.style.width = pb.toFixed(1)+'%'
-    }
-
-    function fillList(container, recent){
-      container.innerHTML=''
-      for(const m of recent){
-        const div=document.createElement('div')
-        const chip = m.r==='W'?'bg-green-100 text-green-700': m.r==='D'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'
-        div.className='bg-slate-50 rounded p-2 text-sm flex items-center justify-between'
-        div.innerHTML=`<span>${m.line}</span><span class="px-2 py-0.5 rounded text-[11px] ${chip}">${m.r}</span>`
-        container.appendChild(div)
-      }
-    }
-
-    function fillH2H(list, t1, t2){
-      const wrap=q('h2hList'); wrap.innerHTML=''
-      for(const m of list.slice(0,5)){
-        const isT1Home = m.home.toLowerCase().includes(t1.toLowerCase())
-        const r = (m.hg>m.ag? (isT1Home?'W':'L') : m.hg<m.ag? (isT1Home?'L':'W') : 'D')
-        const chip = r==='W'?'bg-blue-100 text-blue-700': r==='L'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'
-        const div=document.createElement('div')
-        div.className='bg-slate-50 rounded p-2 text-sm flex items-center justify-between'
-        div.innerHTML=`<span>${m.date.toLocaleDateString()}</span><span class="font-semibold">${m.home} ${m.hg}-${m.ag} ${m.away}</span><span class="px-2 py-0.5 rounded text-[11px] ${chip}">${r}</span>`
-        wrap.appendChild(div)
-      }
-    }
-
-    function heuristicInsights(t1Name, t2Name, t1, t2, drawPct, h2h){
-      const winDiff = t1.winPct - t2.winPct
-      const t1Str = `${t1Name} ${t1.winPct}% W, ${t1.gfpg.toFixed(1)} gfpg / ${t1.gapg.toFixed(1)} gapg`
-      const t2Str = `${t2Name} ${t2.winPct}% W, ${t2.gfpg.toFixed(1)} gfpg / ${t2.gapg.toFixed(1)} gapg`
-
-      // Outlook
-      let outlook = ''
-      if(Math.abs(winDiff) < 8) outlook = `Evenly poised. ${t1Str} vs ${t2Str}.`;
-      else if(winDiff > 0) outlook = `${t1Name} has the form edge. ${t1Str} vs ${t2Str}.`;
-      else outlook = `${t2Name} has the form edge. ${t1Str} vs ${t2Str}.`
-      q('outlook').textContent = outlook
-
-      // Values
-      const ideas=[]
-      const totalGoals = (t1.gfpg + t2.gapg + t2.gfpg + t1.gapg)/2
-      if(Math.abs(winDiff)<8) ideas.push(`Draw (X) consideration — small form gap`)
-      if(totalGoals>2.5) ideas.push(`Over 2.5 goals angle — model avg ~${totalGoals.toFixed(1)}`)
-      if(totalGoals<2.0) ideas.push(`Under 2.5 goals angle — model avg ~${totalGoals.toFixed(1)}`)
-      if(t1.gapg<0.8 || t2.gapg<0.8){ const clean = t1.gapg<t2.gapg?t1Name:t2Name; ideas.push(`${clean} clean sheet potential (low GA)`) }
-      if(ideas.length===0) ideas.push('No clear edge — wait for lineups/market moves')
-      q('values').innerHTML = '<ul class="list-disc ml-5">'+ideas.map(i=>`<li>${i}</li>`).join('')+'</ul>'
-
-      // Factors
-      const h2hStr = h2h.length? `${h2h.filter(m=> (m.home.toLowerCase().includes(t1Name.toLowerCase()) && m.hg>m.ag) || (m.away.toLowerCase().includes(t1Name.toLowerCase()) && m.ag>m.hg)).length}-${h2h.filter(m=>m.hg===m.ag).length}-${h2h.filter(m=> (m.home.toLowerCase().includes(t2Name.toLowerCase()) && m.hg>m.ag) || (m.away.toLowerCase().includes(t2Name.toLowerCase()) && m.ag>m.hg)).length}` : 'n/a'
-      const factors=[
-        `Form gap: ${Math.abs(winDiff)}%`,
-        `Attack: ${t1Name} ${t1.gfpg.toFixed(1)} vs ${t2Name} ${t2.gfpg.toFixed(1)}`,
-        `Defence: ${t1Name} ${t1.gapg.toFixed(1)} vs ${t2Name} ${t2.gapg.toFixed(1)}`,
-        `Draw tendency (combined): ${drawPct}%`,
-        `H2H recent (W-D-L from ${t1Name} view): ${h2hStr}`
-      ]
-      q('factors').innerHTML='<ul class="list-disc ml-5">'+factors.map(f=>`<li>${f}</li>`).join('')+'</ul>'
-
-      // Recommendation
-      let reco='', risk=''
-      if(Math.abs(winDiff)<8){reco=`Tight matchup. Consider Draw/Double Chance or BTTS depending on totals signal (~${totalGoals.toFixed(1)}).`; risk='Medium-High'}
-      else if(Math.abs(winDiff)>20){ const fav=winDiff>0?t1Name:t2Name; reco=`${fav} favored on form. Safer at DNB/Asian -0.25; combine with totals for price.`; risk='Low-Medium'}
-      else { const slight=winDiff>0?t1Name:t2Name; reco=`Slight lean ${slight}. Use DNB or Asian lines to manage variance.`; risk='Medium'}
-      q('reco').innerHTML = `<div class="mb-2">${reco}</div><div class="text-xs text-slate-600">Risk: <b>${risk}</b></div>`
-    }
-
-    // ---------- Actions ----------
-    q('team1Sample').addEventListener('click',()=>{
-      q('team1Name').value='Arsenal'
-      q('team1Text').value=`2025-10-18,Arsenal,Spurs,3,1,PL
-2025-10-05,Arsenal,Chelsea,2,0,PL
-2025-09-27,Liverpool,Arsenal,2,1,PL
-2025-09-18,Man City,Arsenal,1,1,UCL
-2025-09-01,Arsenal,Brighton,4,0,PL
-2025-08-24,Newcastle,Arsenal,0,1,PL
-2025-08-17,Arsenal,Aston Villa,2,2,PL`
-    })
-    q('team2Sample').addEventListener('click',()=>{
-      q('team2Name').value='Spurs'
-      q('team2Text').value=`2025-10-20,Spurs,West Ham,1,0,PL
-2025-10-05,Arsenal,Spurs,3,1,PL
-2025-09-28,Spurs,Everton,2,2,PL
-2025-09-21,Man United,Spurs,2,0,PL
-2025-09-14,Spurs,Brentford,3,1,PL
-2025-08-31,Spurs,Leicester,1,1,PL
-2025-08-23,Spurs,Chelsea,0,2,PL`
-    })
-    q('h2hSample').addEventListener('click',()=>{
-      q('h2hText').value=`2025-10-05,Arsenal,Spurs,3,1,PL
-2025-02-10,Spurs,Arsenal,1,1,PL
-2024-10-02,Arsenal,Spurs,2,0,PL`
-    })
-
-    q('team1Csv').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) parseCsvFile(f, arr=>{ q('team1Text').value = arr.map(m=>`${m.date.toISOString().slice(0,10)},${m.home},${m.away},${m.hg},${m.ag}`).join('\n') }) })
-    q('team2Csv').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) parseCsvFile(f, arr=>{ q('team2Text').value = arr.map(m=>`${m.date.toISOString().slice(0,10)},${m.home},${m.away},${m.hg},${m.ag}`).join('\n') }) })
-
-    q('analyzeBtn').addEventListener('click',()=>{
-      const n = Math.max(3, Math.min(20, parseInt(q('lastN').value)||10))
-      const t1Name = trim(q('team1Name').value)||'Team 1'
-      const t2Name = trim(q('team2Name').value)||'Team 2'
-      const t1All = parseBlock(q('team1Text').value)
-      const t2All = parseBlock(q('team2Text').value)
-      const t1Matches = ensureLastN(t1All, n)
-      const t2Matches = ensureLastN(t2All, n)
-
-      // Optional: balance home/away (simple heuristic)
-      if(q('balanceHomeAway').checked){
-        const bal = (arr, name)=>{
-          const home = arr.filter(m=>m.home.toLowerCase().includes(name.toLowerCase()))
-          const away = arr.filter(m=>m.away.toLowerCase().includes(name.toLowerCase()))
-          const target = Math.min(home.length, away.length)
-          const res = [...home.slice(0,target), ...away.slice(0,target)]
-          res.sort((a,b)=>b.date-a.date); return res.slice(0,Math.min(n,res.length))
-        }
-        if(t1Matches.length>=6) t1Matches.splice(0,t1Matches.length,...bal(t1Matches,t1Name))
-        if(t2Matches.length>=6) t2Matches.splice(0,t2Matches.length,...bal(t2Matches,t2Name))
-      }
-
-      // H2H: use paste if provided, else infer
-      let h2h = []
-      const h2hPaste = parseBlock(q('h2hText').value)
-      if(h2hPaste.length){ h2h = h2hPaste.slice(0,10) }
-      else { h2h = inferH2H(t1Name, t2Name, t1Matches, t2Matches) }
-
-      const t1 = computeTeamStats(t1Name, t1Matches)
-      const t2 = computeTeamStats(t2Name, t2Matches)
-      const drawPct = computeDrawPct(t1Matches, t2Matches)
-
-      // Fill header
-      q('rTeam1').textContent = t1Name; q('rTeam2').textContent=t2Name
-      q('t1FormTitle').textContent = `${t1Name} — Recent Form`
-      q('t2FormTitle').textContent = `${t2Name} — Recent Form`
-
-      // Quick stats
-      q('t1WinPct').textContent = t1.winPct+"%"; q('t1Record').textContent=`${t1.w}W-${t1.d}D-${t1.l}L`
-      q('t2WinPct').textContent = t2.winPct+"%"; q('t2Record').textContent=`${t2.w}W-${t2.d}D-${t2.l}L`
-      q('drawPct').textContent = drawPct+"%"
-
-      // Recent lists
-      q('t1Streak').innerHTML=''; t1.recentList.forEach(m=>badge(q('t1Streak'), m.r))
-      q('t2Streak').innerHTML=''; t2.recentList.forEach(m=>badge(q('t2Streak'), m.r))
-      fillList(q('t1List'), t1.recentList)
-      fillList(q('t2List'), t2.recentList)
-
-      // Averages & bars
-      q('t1Gf').textContent=t1.gfpg.toFixed(1); q('t2Gf').textContent=t2.gfpg.toFixed(1)
-      q('t1Ga').textContent=t1.gapg.toFixed(1); q('t2Ga').textContent=t2.gapg.toFixed(1)
-      q('t1Cs').textContent=t1.csPct+"%"; q('t2Cs').textContent=t2.csPct+"%"
-      percentBars(t1.gfpg, t2.gfpg, q('barGf1'), q('barGf2'))
-      percentBars(t1.gapg, t2.gapg, q('barGa1'), q('barGa2'))
-      percentBars(t1.csPct, t2.csPct, q('barCs1'), q('barCs2'))
-
-      // H2H view
-      if(h2h.length){
-        let w1=0, d=0, w2=0
-        for(const m of h2h){
-          const isT1Home = m.home.toLowerCase().includes(t1Name.toLowerCase())
-          if(m.hg===m.ag) d++
-          else if(m.hg>m.ag) { if(isT1Home) w1++; else w2++; }
-          else { if(isT1Home) w2++; else w1++; }
-        }
-        const total = h2h.length
-        const p1 = 100*w1/total, pD = 100*d/total, p2 = 100*w2/total
-        q('h2hSummary').textContent = `${w1}-${d}-${w2}`
-        q('h2hBar1').style.width = p1.toFixed(1)+'%'; q('h2hBar1').textContent=w1
-        q('h2hBarD').style.width = pD.toFixed(1)+'%'; q('h2hBarD').textContent=d
-        q('h2hBar2').style.width = p2.toFixed(1)+'%'; q('h2hBar2').textContent=w2
-        fillH2H(h2h, t1Name, t2Name)
-      } else {
-        q('h2hSummary').textContent='No H2H found in provided data'
-        q('h2hList').innerHTML=''
-        q('h2hBar1').style.width='33%'; q('h2hBar1').textContent='0'
-        q('h2hBarD').style.width='34%'; q('h2hBarD').textContent='0'
-        q('h2hBar2').style.width='33%'; q('h2hBar2').textContent='0'
-      }
-
-      heuristicInsights(t1Name,t2Name,t1,t2,drawPct,h2h)
-
-      q('results').classList.remove('hidden')
-      window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'})
-    })
-    
-  <script>
-    // --- Quick Result Search helpers (no API) ---
-    function getTeamsFromUI(){
-      const p = getUrlParams();
-      const t1 = (document.getElementById('team1Name')?.textContent || p.comp1 || '').trim();
-      const t2 = (document.getElementById('team2Name')?.textContent || p.comp2 || '').trim();
-      return {t1, t2};
-    }
-
-    function openSearch(site, kind){
-      const {t1, t2} = getTeamsFromUI();
-      if(!t1 || !t2){ alert('Set Team 1 & Team 2 (use the Live page link or URL params ?comp1=...&comp2=...)'); return; }
-      const qh2h = encodeURIComponent(`${t1} vs ${t2} head to head`);
-      const q1 = encodeURIComponent(`${t1} fixtures results last 10`);
-      const q2 = encodeURIComponent(`${t2} fixtures results last 10`);
-      const map = {
-        google:{
-          h2h:`https://www.google.com/search?q=${qh2h}`,
-          fixtures1:`https://www.google.com/search?q=${q1}`,
-          fixtures2:`https://www.google.com/search?q=${q2}`
-        },
-        sofascore:{
-          search:`https://www.sofascore.com/search?q=${encodeURIComponent(t1+' '+t2)}`
-        },
-        flashscore:{
-          search:`https://www.flashscore.com/search/?q=${encodeURIComponent(t1+' '+t2)}`
-        },
-        livescore:{
-          search:`https://www.livescore.com/en/search/?q=${encodeURIComponent(t1+' '+t2)}`
-        }
-      };
-      const url = map[site]?.[kind] || map[site]?.search;
-      if(!url){ alert('Unsupported action'); return; }
-      window.open(url, '_blank');
-    }
-
-    async function pasteInto(targetId){
       try{
-        const txt = await navigator.clipboard.readText();
-        if(!txt){ alert('Clipboard is empty'); return; }
-        const el = document.getElementById(targetId);
-        if(!el){ alert('Target input not found'); return; }
-        el.value = (el.value ? (el.value + '
-') : '') + txt;
-      }catch(e){
-        alert('Clipboard permission denied by the browser. Paste manually with Ctrl/Cmd+V.');
+        // last fixtures for both teams (last=10)
+        const [t1fx, t2fx] = await Promise.all([
+          apiJson(`/v3/fixtures?team=${t1}&season=${currentSeason}&last=10`),
+          apiJson(`/v3/fixtures?team=${t2}&season=${currentSeason}&last=10`)
+        ]);
+
+        // head-to-head last 10
+        const h2h = await apiJson(`/v3/fixtures/headtohead?h2h=${t1}-${t2}&last=10`);
+
+        // compute BTTS & O2.5 from combined last fixtures
+        const comb = [...(t1fx.response||[]), ...(t2fx.response||[])].slice(0,20);
+        let btts=0, o25=0, games=0;
+        comb.forEach(f=>{ const hg=f.goals.home, ag=f.goals.away; if(hg==null||ag==null) return; games++; if(hg>0 && ag>0) btts++; if((hg+ag)>2) o25++; });
+
+        // form badges & match lists
+        buildForm('t1FormBadges','t1MatchList', t1fx.response||[], t1Name);
+        buildForm('t2FormBadges','t2MatchList', t2fx.response||[], t2Name);
+
+        // H2H bars & list
+        buildH2H(h2h.response||[]);
+
+        // Corners averages (fetch statistics for last 5 fixtures per team)
+        const t1last5 = (t1fx.response||[]).slice(0,5);
+        const t2last5 = (t2fx.response||[]).slice(0,5);
+        const cornerStats = await avgCorners([...t1last5, ...t2last5]);
+
+        // KPIs render
+        $('kpiBTTS').textContent = games? `${pct(btts,games)}%`:'--%';
+        $('kpiBTTSNote').textContent = games? `${btts}/${games} games where both teams scored`:'Not enough data';
+        $('kpiO25').textContent = games? `${pct(o25,games)}%`:'--%';
+        $('kpiO25Note').textContent = games? `${o25}/${games} games over 2.5 goals`:'Not enough data';
+        $('kpiCorners').textContent = cornerStats.avgTotal?.toFixed(1) ?? '--';
+        $('kpiCornersNote').textContent = cornerStats.sample? `From ${cornerStats.sample} recent fixtures (both teams)`:'Not enough data';
+
+        // AI cards
+        buildAI({ t1Name, t2Name, bttsRate: games? btts/games:0, o25Rate: games? o25/games:0, cornersAvg:cornerStats.avgTotal||0, h2h:h2h.response||[], t1fx:t1last5, t2fx:t2last5 });
+
+        hide('loadingBox'); show('output'); setStatus('Insights ready ✅','text-emerald-600');
+      }catch(err){
+        console.error(err);
+        hide('loadingBox'); setStatus(err.message||'Failed to load', 'text-rose-600');
       }
     }
+
+    function buildForm(badgesId,listId, fixtures, teamName){
+      const badges = $(badgesId), list=$(listId); badges.innerHTML=''; list.innerHTML='';
+      fixtures.slice(0,5).forEach(f=>{
+        const isHome = f.teams.home.name===teamName;
+        const hg=f.goals.home, ag=f.goals.away; let res='D';
+        if(hg>ag) res = isHome? 'W':'L'; else if(hg<ag) res = isHome? 'L':'W';
+        badges.appendChild(badge(res));
+        list.insertAdjacentHTML('beforeend', fixtureRow(f));
+      });
+    }
+
+    function buildH2H(fixtures){
+      let w1=0,d=0,w2=0; const list=$('h2hList'); list.innerHTML='';
+      fixtures.slice(0,10).forEach(f=>{
+        const hg=f.goals.home, ag=f.goals.away; if(hg===ag) d++; else if(hg>ag) w1++; else w2++;
+        list.insertAdjacentHTML('beforeend', fixtureRow(f));
+      });
+      const total = w1+d+w2 || 1;
+      $('h2hT1Bar').style.width = `${(w1/total)*100}%`; $('h2hT1Bar').textContent = w1;
+      $('h2hDrawBar').style.width = `${(d/total)*100}%`; $('h2hDrawBar').textContent = d;
+      $('h2hT2Bar').style.width = `${(w2/total)*100}%`; $('h2hT2Bar').textContent = w2;
+    }
+
+    async function avgCorners(fixtures){
+      // Fetch per-fixture statistics and compute average total corners.
+      // Note: This uses additional API calls; keep N small for demo.
+      let totals = [];
+      for(const f of fixtures){
+        try{
+          const data = await apiJson(`/v3/fixtures/statistics?fixture=${f.fixture.id}`);
+          // each response has two teams entries; find "Corners" type
+          const sides = data.response || [];
+          let totalCorners = 0; let found=false;
+          sides.forEach(side=>{
+            const stats = side.statistics || [];
+            const row = stats.find(s=> s.type && s.type.toLowerCase()==='corners');
+            if(row && typeof row.value === 'number'){ totalCorners += row.value; found=true; }
+          });
+          if(found) totals.push(totalCorners);
+        }catch(e){ /* ignore */ }
+      }
+      const sample = totals.length;
+      const avgTotal = sample? (sum(totals)/sample): null;
+      return { sample, avgTotal };
+    }
+
+    function aiCard(title, body, tone="info"){
+      const toneMap = { info:'from-indigo-50 to-fuchsia-50', good:'from-emerald-50 to-teal-50', warn:'from-amber-50 to-orange-50' };
+      return `<div class="rounded-xl p-5 bg-gradient-to-br ${toneMap[tone]||toneMap.info}">
+        <div class="font-bold text-slate-800 mb-2">${title}</div>
+        <div class="text-slate-700 text-sm">${body}</div>
+      </div>`;
+    }
+
+    function buildAI(ctx){
+      const cards = [];
+      // BTTS
+      if(ctx.bttsRate>=0.65){
+        cards.push(aiCard('Both Teams To Score — Likely', `BTTS hit rate around ${(ctx.bttsRate*100).toFixed(0)}% over recent games. Consider BTTS (Yes).`, 'good'));
+      } else if(ctx.bttsRate<=0.35){
+        cards.push(aiCard('BTTS — Unlikely', `BTTS hit rate only ${(ctx.bttsRate*100).toFixed(0)}%. Consider BTTS (No) or Under goals markets.`, 'warn'));
+      } else {
+        cards.push(aiCard('BTTS — Balanced', `BTTS sits near ${(ctx.bttsRate*100).toFixed(0)}%. Look for live odds movement before entry.`));
+      }
+
+      // Over 2.5
+      if(ctx.o25Rate>=0.6){
+        cards.push(aiCard('Over 2.5 Goals — Positive Trend', `Over 2.5 has hit ${(ctx.o25Rate*100).toFixed(0)}% recently. Corroborate with lineups before kickoff.`, 'good'));
+      } else if(ctx.o25Rate<=0.4){
+        cards.push(aiCard('Under 2.5 Goals In Play', `Only ${(ctx.o25Rate*100).toFixed(0)}% of recent games cleared 2.5. Consider Under lines.`, 'warn'));
+      }
+
+      // Corners
+      if(ctx.cornersAvg>=9){
+        cards.push(aiCard('Corners — High', `Avg total corners ≈ ${ctx.cornersAvg.toFixed(1)}. Over 9.5 corners could be viable depending on price.`, 'good'));
+      } else if(ctx.cornersAvg>=6){
+        cards.push(aiCard('Corners — Moderate', `Avg total corners ≈ ${ctx.cornersAvg.toFixed(1)} (Over 5.5 often reasonable).`));
+      } else if(ctx.cornersAvg){
+        cards.push(aiCard('Corners — Low', `Avg total corners ≈ ${ctx.cornersAvg.toFixed(1)}. Consider Under lines or avoid corners markets.`, 'warn'));
+      }
+
+      // H2H tilt
+      const h = ctx.h2h.slice(0,5);
+      let t1=0,d=0,t2=0; h.forEach(f=>{ const hg=f.goals.home, ag=f.goals.away; if(hg===ag) d++; else if(hg>ag) t1++; else t2++; });
+      if(t1>=4 || t2>=4){
+        const side = t1>t2? ctx.t1Name : ctx.t2Name;
+        cards.push(aiCard('H2H Dominance', `${side} has dominated recent H2H (${t1}-${d}-${t2}). Consider Draw No Bet on the dominant side.`));
+      }
+
+      // Safety note
+      cards.push(aiCard('Bankroll Safety', 'Avoid long ladders. Cap slip size, and skip if odds drift sharply against your model.', 'warn'));
+
+      $('aiCards').innerHTML = cards.join('');
+    }
+
+    // ======= INIT & EVENTS =======
+    document.addEventListener('DOMContentLoaded', async()=>{
+      // restore key
+      const saved = localStorage.getItem('apiFootballKey'); if(saved){ $('apiKey').value = saved; }
+      $('apiKey').addEventListener('input', ()=> localStorage.setItem('apiFootballKey', $('apiKey').value.trim()));
+
+      try{ await loadLeagues(); }catch(e){ setStatus('Failed to load leagues (check key later).','text-rose-600'); }
+
+      $('loadTeamsBtn').addEventListener('click', loadTeams);
+      $('analyzeBtn').addEventListener('click', analyze);
+    });
   </script>
 </body>
 </html>
